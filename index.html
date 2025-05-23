@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Sharing App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h2 {
+      color: #333;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    input[type="file"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0073e6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
+    .preview {
+      margin-top: 20px;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Photo Sharing App</h2>
+    <input type="file" id="fileInput">
+    <button onclick="upload()">Upload</button>
+
+    <h3>Download Photo</h3>
+    <input type="text" id="downloadFilename" placeholder="Enter filename.jpg">
+    <button onclick="download()">Download</button>
+
+    <div id="previewContainer">
+      <h4>Preview</h4>
+      <img id="previewImage" class="preview" src="" alt="Preview will appear here" hidden>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = 'https://kq2w6g2s0b.execute-api.eu-north-1.amazonaws.com/prod';
+
+    async function upload() {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) return alert('Please select a file');
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result.split(',')[1];
+        const response = await fetch(`${apiBase}/uploadPhotoHandler`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'filename': file.name
+          },
+          body: base64Data
+        });
+        alert(await response.text());
+        // Preview after upload
+        document.getElementById('previewImage').src = reader.result;
+        document.getElementById('previewImage').hidden = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function download() {
+  const filename = document.getElementById('downloadFilename').value.trim();
+  if (!filename) return alert('Please enter a filename');
+
+  try {
+    const response = await fetch(`${apiBase}/downloadPhotoHandler?filename=${encodeURIComponent(filename)}`);
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+
+    // Preview image
+    const imageUrl = URL.createObjectURL(blob);
+    document.getElementById('previewImage').src = imageUrl;
+    document.getElementById('previewImage').hidden = false;
+
+    // Trigger download
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = filename;
+    link.click();
+  } catch (err) {
+    alert(err.message);
+    console.error('Download error:', err);
+  }
+}
+
+  </script>
+</body>
+</html>
